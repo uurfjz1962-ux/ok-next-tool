@@ -3,113 +3,215 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>PC - OK/次 連動</title>
+  <title>PC側：スイッチ確認</title>
   <style>
-    body { font-family: system-ui, sans-serif; margin: 24px; line-height: 1.5; }
-    .row { margin: 12px 0; }
-    input { font-size: 18px; padding: 10px; width: 220px; }
-    button { font-size: 18px; padding: 10px 16px; }
-    #status { padding: 10px; background: #f3f3f3; border-radius: 8px; }
-    #big { font-size: 34px; font-weight: 800; margin: 18px 0 8px; }
-    .muted { color: #666; font-size: 14px; }
+    :root{
+      --bg:#0b1220;
+      --card:#121b2e;
+      --text:#eaf0ff;
+      --muted:#a9b5d6;
+      --accent:#5eead4;
+      --warn:#fbbf24;
+      --danger:#fb7185;
+      --btn:#2563eb;
+      --btn2:#1f2937;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 18px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: radial-gradient(1200px 600px at 20% 0%, #172554 0%, var(--bg) 55%);
+      color:var(--text);
+    }
+    .wrap{max-width:980px; margin:0 auto; padding:22px;}
+    .title{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;}
+    h1{margin:0; font-size:22px; letter-spacing:.02em;}
+    .chip{color:var(--muted); font-size:13px; padding:6px 10px; border:1px solid rgba(255,255,255,.12); border-radius:999px; background:rgba(255,255,255,.04);}
+    .card{
+      margin-top:14px; background:rgba(18,27,46,.92); border:1px solid rgba(255,255,255,.10);
+      border-radius:var(--radius); box-shadow:var(--shadow); padding:16px;
+    }
+    .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+    input{
+      width:220px; max-width:100%;
+      padding:12px 12px; font-size:18px; border-radius:14px;
+      border:1px solid rgba(255,255,255,.15);
+      background:rgba(255,255,255,.06);
+      color:var(--text);
+      outline:none;
+    }
+    button{
+      padding:12px 14px; font-size:18px; border-radius:14px; border:0;
+      color:white; cursor:pointer;
+    }
+    .btn{background:var(--btn);}
+    .btn:disabled{opacity:.45; cursor:not-allowed;}
+    .btn2{background:rgba(255,255,255,.10); color:var(--text); border:1px solid rgba(255,255,255,.12);}
+    .status{
+      margin-top:14px;
+      padding:14px; border-radius:16px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.06);
+      display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
+    }
+    .status .left{display:flex; flex-direction:column; gap:4px;}
+    .status .label{font-size:13px; color:var(--muted)}
+    .status .value{font-size:18px; font-weight:700}
+    .banner{
+      margin-top:14px;
+      padding:18px; border-radius:18px;
+      border:1px solid rgba(255,255,255,.14);
+      background:linear-gradient(180deg, rgba(94,234,212,.14), rgba(255,255,255,.04));
+    }
+    .big{
+      font-size:34px; font-weight:900; letter-spacing:.02em;
+      margin:0 0 8px;
+    }
+    .sub{color:var(--muted); font-size:14px; margin:0;}
+    .hint{margin-top:12px; color:var(--muted); font-size:13px; line-height:1.6;}
+    .flash{
+      outline: 2px solid rgba(251,191,36,.55);
+      box-shadow: 0 0 0 6px rgba(251,191,36,.12);
+    }
   </style>
 </head>
 <body>
-  <h1>PC側</h1>
+  <div class="wrap">
+    <div class="title">
+      <h1>PC側（1F）：スイッチ操作</h1>
+      <div class="chip">地下の確認係が「確認できた」を押したら次へ進める</div>
+    </div>
 
-  <div class="row">
-    部屋ID：
-    <input id="room" maxlength="16" placeholder="例: ABCD" />
-    <button id="connect">接続</button>
-  </div>
+    <div class="card">
+      <div class="row">
+        <input id="room" maxlength="16" placeholder="部屋ID（例: ABCD）">
+        <button id="connect" class="btn">接続</button>
+        <button id="clear" class="btn2" type="button">表示リセット</button>
+      </div>
 
-  <div id="status" class="row">未接続</div>
+      <div class="status" id="statusBox">
+        <div class="left">
+          <div class="label">接続状態</div>
+          <div class="value" id="status">未接続</div>
+        </div>
+        <div class="left">
+          <div class="label">操作</div>
+          <div class="value">スマホOK待ち → 「次のスイッチへ」</div>
+        </div>
+      </div>
 
-  <div id="big"></div>
+      <div class="banner" id="banner">
+        <p class="big" id="big">地下の確認待ち</p>
+        <p class="sub" id="sub">地下で消灯を確認できたら、スマホ側で「確認できた（OK）」を押してもらってください。</p>
+      </div>
 
-  <div class="row">
-    <button id="next" disabled>次</button>
-  </div>
+      <div class="row" style="margin-top:14px;">
+        <button id="next" class="btn" disabled>次のスイッチへ</button>
+      </div>
 
-  <div class="muted">
-    ※ PC/スマホ両方で同じ部屋IDに接続してください（ログイン不要）
+      <div class="hint">
+        ・部屋IDはPC/スマホで同じものを入力<br>
+        ・番号や進捗は人が管理でOK（この画面は「確認OK」と「次へ」を確実に回すだけ）
+      </div>
+    </div>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-    import {
-      getFirestore, doc, onSnapshot, setDoc, updateDoc, increment, serverTimestamp
-    } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+    import { getFirestore, doc, onSnapshot, setDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-    // ★ここだけ自分の Firebase 設定に置き換える
     const firebaseConfig = {
-  apiKey: "AIzaSyBMgfoUE8UYwydCQzjOllwVHW7YRxd-IUE",
-  authDomain: "ok-next-tool.firebaseapp.com",
-  projectId: "ok-next-tool",
-  storageBucket: "ok-next-tool.firebasestorage.app",
-  messagingSenderId: "219936585310",
-  appId: "1:219936585310:web:f40edd2d3b58d8d7aba6cf"
-};
-
+      apiKey: "AIzaSyBMgfoUE8UYwydCQzjOllwVHW7YRxd-IUE",
+      authDomain: "ok-next-tool.firebaseapp.com",
+      projectId: "ok-next-tool",
+      storageBucket: "ok-next-tool.firebasestorage.app",
+      messagingSenderId: "219936585310",
+      appId: "1:219936585310:web:f40edd2d3b58d8d7aba6cf"
+    };
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
     const roomEl = document.getElementById("room");
     const connectBtn = document.getElementById("connect");
+    const clearBtn = document.getElementById("clear");
     const statusEl = document.getElementById("status");
     const bigEl = document.getElementById("big");
+    const subEl = document.getElementById("sub");
     const nextBtn = document.getElementById("next");
+    const banner = document.getElementById("banner");
+    const statusBox = document.getElementById("statusBox");
 
     let unsub = null;
-    let roomId = "";
     let roomRef = null;
-
     let lastPhoneOk = 0;
+    let roomIdForUI = "";
 
     function normalizeRoomId(s) {
       return (s || "").trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "");
     }
 
+    function setWaiting() {
+      bigEl.textContent = "地下の確認待ち";
+      subEl.textContent = "地下で消灯を確認できたら、スマホ側で「確認できた（OK）」を押してもらってください。";
+      nextBtn.disabled = true;
+      banner.classList.remove("flash");
+      statusBox.classList.remove("flash");
+    }
+
+    function flash(el){
+      el.classList.add("flash");
+      setTimeout(()=>el.classList.remove("flash"), 900);
+    }
+
+    clearBtn.onclick = () => setWaiting();
+
     connectBtn.onclick = async () => {
-      roomId = normalizeRoomId(roomEl.value);
-      if (!roomId) return alert("部屋IDを入れてね（例: ABCD）");
+      const roomId = normalizeRoomId(roomEl.value);
+      if (!roomId) return alert("部屋IDを入れてください（例: ABCD）");
+      roomIdForUI = roomId;
 
       roomRef = doc(db, "rooms", roomId);
 
-      await setDoc(roomRef, {
-        phoneOkCount: 0,
-        pcNextCount: 0,
-        updatedAt: serverTimestamp()
-      }, { merge: true });
+      await setDoc(roomRef, { phoneOk: 0, pcNext: 0 }, { merge: true });
 
       if (unsub) unsub();
       statusEl.textContent = `接続中：部屋 ${roomId}`;
-      bigEl.textContent = "";
-      nextBtn.disabled = true;
+      setWaiting();
+      lastPhoneOk = 0;
 
       unsub = onSnapshot(roomRef, (snap) => {
         const data = snap.data() || {};
-        const phoneOk = Number(data.phoneOkCount || 0);
+        const phoneOk = Number(data.phoneOk || 0);
 
         if (phoneOk > lastPhoneOk) {
-          bigEl.textContent = "OK 次";
+          bigEl.textContent = "確認OKが届きました";
+          subEl.textContent = "このスイッチの復旧（ON）を確認したら、「次のスイッチへ」を押してください。";
           nextBtn.disabled = false;
+          flash(banner);
+          flash(statusBox);
         }
+
         lastPhoneOk = phoneOk;
+      }, (err) => {
+        statusEl.textContent = `エラー：${err.message}`;
       });
     };
 
     nextBtn.onclick = async () => {
       if (!roomRef) return;
-      await updateDoc(roomRef, {
-        pcNextCount: increment(1),
-        updatedAt: serverTimestamp()
-      });
+      await updateDoc(roomRef, { pcNext: increment(1) });
 
-      bigEl.textContent = "送信：次";
+      bigEl.textContent = "次へを送信しました";
+      subEl.textContent = "次のスイッチを切って、地下の確認待ちに戻ります。";
       nextBtn.disabled = true;
-      setTimeout(() => { bigEl.textContent = ""; }, 800);
+      flash(banner);
+
+      setTimeout(() => {
+        statusEl.textContent = `接続中：部屋 ${roomIdForUI}`;
+        setWaiting();
+      }, 900);
     };
   </script>
 </body>
