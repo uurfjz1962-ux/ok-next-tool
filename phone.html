@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Phone - OK/次 連動</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 18px; line-height: 1.5; }
+    h1 { font-size: 22px; margin: 6px 0 12px; }
+    .row { margin: 12px 0; }
+    input { font-size: 18px; padding: 12px; width: 100%; box-sizing: border-box; }
+    button { font-size: 22px; padding: 14px 18px; width: 100%; border-radius: 12px; }
+    #note { padding: 12px; background: #eef6ff; border-radius: 12px; }
+    .muted { color: #666; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <h1>スマホ側</h1>
+
+  <div class="row">
+    <input id="room" maxlength="16" placeholder="部屋ID（例: ABCD）" />
+  </div>
+
+  <div class="row">
+    <button id="connect">接続</button>
+  </div>
+
+  <div id="note" class="row">未接続</div>
+
+  <div class="row">
+    <button id="ok" disabled>OK</button>
+  </div>
+
+  <div class="muted">
+    ※ 同じ部屋IDでPC側も接続してください（ログイン不要）
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+    import {
+      getFirestore, doc, onSnapshot, setDoc, updateDoc, increment, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+    // ★pc.html と同じ Firebase 設定を貼る
+    const firebaseConfig = {
+      apiKey: "AIzaSyBMgfoUE8UYwydCQzjOllwVHW7YRxd-IUE",
+      authDomain: "ok-next-tool.firebaseapp.com",
+      projectId: "ok-next-tool",
+      storageBucket: "ok-next-tool.firebasestorage.app",
+      messagingSenderId: "219936585310",
+      appId: "1:219936585310:web:f40edd2d3b58d8d7aba6cf"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const roomEl = document.getElementById("room");
+    const connectBtn = document.getElementById("connect");
+    const noteEl = document.getElementById("note");
+    const okBtn = document.getElementById("ok");
+
+    let unsub = null;
+    let roomId = "";
+    let roomRef = null;
+    let lastPcNext = 0;
+
+    function normalizeRoomId(s) {
+      return (s || "").trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "");
+    }
+
+    connectBtn.onclick = async () => {
+      roomId = normalizeRoomId(roomEl.value);
+      if (!roomId) return alert("部屋IDを入れてね（例: ABCD）");
+
+      roomRef = doc(db, "rooms", roomId);
+
+      await setDoc(roomRef, {
+        phoneOkCount: 0,
+        pcNextCount: 0,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      if (unsub) unsub();
+      noteEl.textContent = `接続中：部屋 ${roomId}`;
+      okBtn.disabled = false;
+
+      unsub = onSnapshot(roomRef, (snap) => {
+        const data = snap.data() || {};
+        const pcNext = Number(data.pcNextCount || 0);
+
+        if (pcNext > lastPcNext) {
+          noteEl.textContent = "PCで「次」が押された！";
+          if (navigator.vibrate) navigator.vibrate(120);
+          setTimeout(() => {
+            noteEl.textContent = `接続中：部屋 ${roomId}`;
+          }, 1200);
+        }
+        lastPcNext = pcNext;
+      });
+    };
+
+    okBtn.onclick = async () => {
+      if (!roomRef) return;
+      await updateDoc(roomRef, {
+        phoneOkCount: increment(1),
+        updatedAt: serverTimestamp()
+      });
+
+      noteEl.textContent = "送信：OK（PCに出るはず）";
+      setTimeout(() => {
+        noteEl.textContent = `接続中：部屋 ${roomId}`;
+      }, 900);
+    };
+  </script>
+</body>
+</html>
