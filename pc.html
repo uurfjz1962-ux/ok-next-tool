@@ -10,13 +10,11 @@
       --card:#121b2e;
       --text:#eaf0ff;
       --muted:#a9b5d6;
-      --accent:#5eead4;
-      --warn:#fbbf24;
-      --danger:#fb7185;
       --btn:#2563eb;
       --btn2:#1f2937;
       --shadow: 0 10px 30px rgba(0,0,0,.35);
       --radius: 18px;
+      --danger:#fb7185;
     }
     *{box-sizing:border-box}
     body{
@@ -34,7 +32,7 @@
     }
     .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
     input{
-      width:220px; max-width:100%;
+      width:240px; max-width:100%;
       padding:12px 12px; font-size:18px; border-radius:14px;
       border:1px solid rgba(255,255,255,.15);
       background:rgba(255,255,255,.06);
@@ -62,7 +60,7 @@
       margin-top:14px;
       padding:18px; border-radius:18px;
       border:1px solid rgba(255,255,255,.14);
-      background:linear-gradient(180deg, rgba(94,234,212,.14), rgba(255,255,255,.04));
+      background:linear-gradient(180deg, rgba(96,165,250,.14), rgba(255,255,255,.04));
     }
     .big{
       font-size:34px; font-weight:900; letter-spacing:.02em;
@@ -70,9 +68,16 @@
     }
     .sub{color:var(--muted); font-size:14px; margin:0;}
     .hint{margin-top:12px; color:var(--muted); font-size:13px; line-height:1.6;}
+
+    /* 受信時に目立たせる */
+    .dangerBox{
+      border-color: rgba(251,113,133,.75) !important;
+      background: linear-gradient(180deg, rgba(251,113,133,.18), rgba(255,255,255,.04)) !important;
+    }
+    .dangerText{ color: var(--danger) !important; }
     .flash{
-      outline: 2px solid rgba(251,191,36,.55);
-      box-shadow: 0 0 0 6px rgba(251,191,36,.12);
+      outline: 2px solid rgba(251,113,133,.55);
+      box-shadow: 0 0 0 6px rgba(251,113,133,.12);
     }
   </style>
 </head>
@@ -80,14 +85,14 @@
   <div class="wrap">
     <div class="title">
       <h1>PC側（1F）：スイッチ操作</h1>
-      <div class="chip">地下の確認係が「確認できた」を押したら次へ進める</div>
+      <div class="chip">スマホの「確認できた」→ PCに表示 ／ PCの「次のスイッチへ」→ スマホに表示</div>
     </div>
 
     <div class="card">
       <div class="row">
         <input id="room" maxlength="16" placeholder="部屋ID（例: ABCD）">
         <button id="connect" class="btn">接続</button>
-        <button id="clear" class="btn2" type="button">表示リセット</button>
+        <button id="reset" class="btn2" type="button">表示リセット</button>
       </div>
 
       <div class="status" id="statusBox">
@@ -96,7 +101,7 @@
           <div class="value" id="status">未接続</div>
         </div>
         <div class="left">
-          <div class="label">操作</div>
+          <div class="label">手順</div>
           <div class="value">スマホOK待ち → 「次のスイッチへ」</div>
         </div>
       </div>
@@ -111,8 +116,8 @@
       </div>
 
       <div class="hint">
-        ・部屋IDはPC/スマホで同じものを入力<br>
-        ・番号や進捗は人が管理でOK（この画面は「確認OK」と「次へ」を確実に回すだけ）
+        ・部屋IDは PC/スマホで同じものを入力<br>
+        ・番号や進捗は人が管理（この画面は「確認OK」と「次へ」だけ回す）
       </div>
     </div>
   </div>
@@ -121,6 +126,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
     import { getFirestore, doc, onSnapshot, setDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
+    // あなたのFirebase設定
     const firebaseConfig = {
       apiKey: "AIzaSyBMgfoUE8UYwydCQzjOllwVHW7YRxd-IUE",
       authDomain: "ok-next-tool.firebaseapp.com",
@@ -135,13 +141,13 @@
 
     const roomEl = document.getElementById("room");
     const connectBtn = document.getElementById("connect");
-    const clearBtn = document.getElementById("clear");
+    const resetBtn = document.getElementById("reset");
     const statusEl = document.getElementById("status");
+    const statusBox = document.getElementById("statusBox");
+    const banner = document.getElementById("banner");
     const bigEl = document.getElementById("big");
     const subEl = document.getElementById("sub");
     const nextBtn = document.getElementById("next");
-    const banner = document.getElementById("banner");
-    const statusBox = document.getElementById("statusBox");
 
     let unsub = null;
     let roomRef = null;
@@ -152,20 +158,28 @@
       return (s || "").trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "");
     }
 
+    function clearHighlight() {
+      banner.classList.remove("dangerBox", "flash");
+      statusBox.classList.remove("flash");
+      bigEl.classList.remove("dangerText");
+    }
+
+    function flashDanger() {
+      banner.classList.add("dangerBox");
+      bigEl.classList.add("dangerText");
+      banner.classList.add("flash");
+      statusBox.classList.add("flash");
+      setTimeout(() => clearHighlight(), 1200);
+    }
+
     function setWaiting() {
+      clearHighlight();
       bigEl.textContent = "地下の確認待ち";
       subEl.textContent = "地下で消灯を確認できたら、スマホ側で「確認できた（OK）」を押してもらってください。";
       nextBtn.disabled = true;
-      banner.classList.remove("flash");
-      statusBox.classList.remove("flash");
     }
 
-    function flash(el){
-      el.classList.add("flash");
-      setTimeout(()=>el.classList.remove("flash"), 900);
-    }
-
-    clearBtn.onclick = () => setWaiting();
+    resetBtn.onclick = () => setWaiting();
 
     connectBtn.onclick = async () => {
       const roomId = normalizeRoomId(roomEl.value);
@@ -174,6 +188,7 @@
 
       roomRef = doc(db, "rooms", roomId);
 
+      // 最小データ（カウンタ2個だけ）
       await setDoc(roomRef, { phoneOk: 0, pcNext: 0 }, { merge: true });
 
       if (unsub) unsub();
@@ -185,12 +200,12 @@
         const data = snap.data() || {};
         const phoneOk = Number(data.phoneOk || 0);
 
+        // スマホから「確認できた」が来た
         if (phoneOk > lastPhoneOk) {
           bigEl.textContent = "確認OKが届きました";
-          subEl.textContent = "このスイッチの復旧（ON）を確認したら、「次のスイッチへ」を押してください。";
+          subEl.textContent = "このスイッチを復旧（ON）したら「次のスイッチへ」を押してください。";
           nextBtn.disabled = false;
-          flash(banner);
-          flash(statusBox);
+          flashDanger();
         }
 
         lastPhoneOk = phoneOk;
@@ -199,14 +214,15 @@
       });
     };
 
+    // PCが「次のスイッチへ」→スマホに「次へ」通知
     nextBtn.onclick = async () => {
       if (!roomRef) return;
       await updateDoc(roomRef, { pcNext: increment(1) });
 
+      clearHighlight();
       bigEl.textContent = "次へを送信しました";
-      subEl.textContent = "次のスイッチを切って、地下の確認待ちに戻ります。";
+      subEl.textContent = "次のスイッチ操作に進んでください。";
       nextBtn.disabled = true;
-      flash(banner);
 
       setTimeout(() => {
         statusEl.textContent = `接続中：部屋 ${roomIdForUI}`;
