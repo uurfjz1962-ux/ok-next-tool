@@ -11,9 +11,9 @@
       --text:#eaf0ff;
       --muted:#a9b5d6;
       --ok:#22c55e;
-      --accent:#60a5fa;
       --shadow: 0 10px 30px rgba(0,0,0,.35);
       --radius: 18px;
+      --danger:#fb7185;
     }
     *{box-sizing:border-box}
     body{
@@ -67,11 +67,19 @@
       margin:0 0 6px;
     }
     .sub{margin:0; color:var(--muted); font-size:13px;}
-    .hint{margin-top:10px; color:var(--muted); font-size:12px; line-height:1.6;}
-    .flash{
-      outline: 2px solid rgba(96,165,250,.6);
-      box-shadow: 0 0 0 6px rgba(96,165,250,.12);
+
+    /* 受信時に目立たせる */
+    .dangerBox{
+      border-color: rgba(251,113,133,.75) !important;
+      background: linear-gradient(180deg, rgba(251,113,133,.18), rgba(255,255,255,.04)) !important;
     }
+    .dangerText{ color: var(--danger) !important; }
+    .flash{
+      outline: 2px solid rgba(251,113,133,.55);
+      box-shadow: 0 0 0 6px rgba(251,113,133,.12);
+    }
+
+    .hint{margin-top:10px; color:var(--muted); font-size:12px; line-height:1.6;}
   </style>
 </head>
 <body>
@@ -102,6 +110,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
     import { getFirestore, doc, onSnapshot, setDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
+    // あなたのFirebase設定
     const firebaseConfig = {
       apiKey: "AIzaSyBMgfoUE8UYwydCQzjOllwVHW7YRxd-IUE",
       authDomain: "ok-next-tool.firebaseapp.com",
@@ -131,12 +140,19 @@
       return (s || "").trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "");
     }
 
-    function flash() {
-      noteBox.classList.add("flash");
-      setTimeout(()=>noteBox.classList.remove("flash"), 900);
+    function clearHighlight() {
+      noteBox.classList.remove("dangerBox", "flash");
+      noteEl.classList.remove("dangerText");
     }
 
-    function setConnected() {
+    function flashDanger() {
+      noteBox.classList.add("dangerBox", "flash");
+      noteEl.classList.add("dangerText");
+      setTimeout(() => clearHighlight(), 1200);
+    }
+
+    function setConnectedText() {
+      clearHighlight();
       noteEl.textContent = "PCの操作待ち";
       subEl.textContent = "消灯を確認できたら「確認できた（OK）」を押してください。";
     }
@@ -147,26 +163,28 @@
       roomIdForUI = roomId;
 
       roomRef = doc(db, "rooms", roomId);
+
+      // 最小データ（カウンタ2個だけ）
       await setDoc(roomRef, { phoneOk: 0, pcNext: 0 }, { merge: true });
 
       if (unsub) unsub();
       okBtn.disabled = false;
       lastPcNext = 0;
-      setConnected();
+      setConnectedText();
 
       unsub = onSnapshot(roomRef, (snap) => {
         const data = snap.data() || {};
         const pcNext = Number(data.pcNext || 0);
 
+        // PCから「次へ」が来た
         if (pcNext > lastPcNext) {
           noteEl.textContent = "次へ（次のスイッチ）";
           subEl.textContent = "次のスイッチ操作に進んでください。";
-          flash();
-          if (navigator.vibrate) navigator.vibrate(90);
+          flashDanger();
+          if (navigator.vibrate) navigator.vibrate([80, 60, 80]);
 
           setTimeout(() => {
-            noteEl.textContent = "PCの操作待ち";
-            subEl.textContent = "消灯を確認できたら「確認できた（OK）」を押してください。";
+            setConnectedText();
           }, 1200);
         }
 
@@ -182,14 +200,13 @@
 
       await updateDoc(roomRef, { phoneOk: increment(1) });
 
+      clearHighlight();
       noteEl.textContent = "確認OKを送信しました";
       subEl.textContent = "PCが「次のスイッチへ」を押すのを待ってください。";
-      flash();
       if (navigator.vibrate) navigator.vibrate(60);
 
       setTimeout(() => {
-        noteEl.textContent = "PCの操作待ち";
-        subEl.textContent = "消灯を確認できたら「確認できた（OK）」を押してください。";
+        setConnectedText();
       }, 900);
     };
   </script>
